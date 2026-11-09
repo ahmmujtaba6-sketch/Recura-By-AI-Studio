@@ -1,0 +1,6 @@
+{
+  "name": "RECURA - Physiotherapy Marketplace",
+  "description": "RECURA by Physio Hub - Pakistan's physiotherapy marketplace for booking sessions, pain tracking, exercises, and rehabilitation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
