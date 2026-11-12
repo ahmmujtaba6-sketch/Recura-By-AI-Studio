@@ -931,3 +931,96 @@ therapistWorkspaceRouter.post('/invites', requireAuth, requireRole('therapist', 
     res.status(500).json({ error: 'Failed to generate invite code' });
   }
 });
+
+// 16. POST /api/therapist-workspace/comments
+// Therapist comments on patient pain progress (Premium plan feature)
+const commentSchema = z.object({
+  pain_entry_id: z.number().int().positive(),
+  text: z.string().trim().min(2, 'Comment must be at least 2 characters').max(1000),
+});
+
+therapistWorkspaceRouter.post('/comments', requireAuth, requireRole('therapist', 'admin'), (req: AuthenticatedRequest, res) => {
+  try {
+    const therapist = getTherapistRecord(req.user!.id);
+    if (!therapist) {
+      return res.status(404).json({ error: 'Therapist profile not found' });
+    }
+
+    const parseResult = commentSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({
+        error: parseResult.error.issues[0]?.message || 'Invalid comment data',
+      });
+    }
+
+    const { pain_entry_id, text } = parseResult.data;
+
+    // Verify pain entry exists
+    const painEntry = db.prepare(`
+      SELECT pe.*, p.plan
+      FROM pain_entries pe
+      LEFT JOIN plans p ON pe.patient_id = p.patient_id
+      WHERE pe.id = ?
+    `).get(pain_entry_id) as any;
+
+    if (!painEntry) {
+      return res.status(404).json({ error: 'Pain entry not found' });
+    }
+
+    // Check plan restriction: "Therapist comments on progress: no on Free, no on Basic, yes on Premium"
+    if (!painEntry.plan || painEntry.plan !== 'premium') {
+      return res.status(403).json({
+        error: 'Therapist comments on recovery progress are only available for patients on the Premium plan.',
+        patientPlan: painEntry.plan || 'free',
+        upgradeRequired: true,
+      });
+    }
+
+    // Insert or update comment
+    const existing = db.prepare(`
+      SELECT id FROM comments
+      WHERE pain_entry_id = ? AND therapist_id = ?
+    `).get(pain_entry_id, therapist.id) as any;
+
+    let commentId: number;
+    if (existing) {
+      db.prepare(`
+        UPDATE comments
+        SET text = ?, created_at = datetime('now')
+        WHERE id = ?
+      `).run(text, existing.id);
+      commentId = existing.id;
+    } else {
+      const result = db.prepare(`
+        INSERT INTO comments (pain_entry_id, therapist_id, text)
+        VALUES (?, ?, ?)
+      `).run(pain_entry_id, therapist.id, text);
+      commentId = Number(result.lastInsertRowid);
+    }
+
+    // Send notification to patient
+    db.prepare(`
+      INSERT INTO notifications (user_id, type, title, body)
+      VALUES (?, 'therapist_comment', 'Clinical Note from Physiotherapist', ?)
+    `).run(
+      painEntry.patient_id,
+      `${formatTherapistName(therapist.name)} commented on your ${painEntry.date} pain log: "${text.length > 80 ? text.slice(0, 80) + '...' : text}"`
+    );
+
+    const comment = db.prepare(`
+      SELECT c.*, t.name as therapist_name, t.speciality
+      FROM comments c
+      JOIN therapists t ON c.therapist_id = t.id
+      WHERE c.id = ?
+    `).get(commentId);
+
+    res.json({
+      message: 'Clinical comment saved successfully.',
+      comment,
+    });
+  } catch (err: any) {
+    console.error('Error saving comment:', err);
+    res.status(500).json({ error: 'Failed to save clinical comment' });
+  }
+});
+

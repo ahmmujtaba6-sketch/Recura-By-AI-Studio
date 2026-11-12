@@ -18,6 +18,15 @@ import { MyPatientsPage } from './pages/therapist/MyPatientsPage.tsx';
 import { SchedulePage } from './pages/therapist/SchedulePage.tsx';
 import { ExerciseLibraryPage } from './pages/therapist/ExerciseLibraryPage.tsx';
 import { PatientInvitesPage } from './pages/therapist/PatientInvitesPage.tsx';
+import { PlansBillingPage } from './pages/patient/PlansBillingPage.tsx';
+import { ProgressPage } from './pages/patient/ProgressPage.tsx';
+import { ChatPage } from './pages/common/ChatPage.tsx';
+import { AdminDashboardOverview } from './pages/admin/AdminDashboardOverview.tsx';
+import { TherapistApprovalsPage } from './pages/admin/TherapistApprovalsPage.tsx';
+import { UserDirectoryPage } from './pages/admin/UserDirectoryPage.tsx';
+import { AllAppointmentsPage } from './pages/admin/AllAppointmentsPage.tsx';
+import { SupportTicketsPage } from './pages/admin/SupportTicketsPage.tsx';
+import { HelpPage } from './pages/common/HelpPage.tsx';
 import { TherapistDetails } from './components/public/TherapistProfileModal.tsx';
 import { CalendarCheck, Sparkles, CheckCircle2, ArrowRight, X } from 'lucide-react';
 
@@ -223,17 +232,31 @@ function MainApp() {
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
             {portalTab === 'dashboard' ? (
-              <DashboardOverview onNavigate={(tab) => setPortalTab(tab)} />
+              user?.role === 'admin' ? (
+                <AdminDashboardOverview onNavigate={(tab) => setPortalTab(tab)} />
+              ) : (
+                <DashboardOverview onNavigate={(tab) => setPortalTab(tab)} />
+              )
             ) : portalTab === 'profile' ? (
               <PatientProfilePage />
             ) : portalTab === 'search' ? (
               <SearchPage />
             ) : portalTab === 'appointments' ? (
-              <AppointmentsPage />
+              user?.role === 'admin' ? (
+                <AllAppointmentsPage />
+              ) : (
+                <AppointmentsPage />
+              )
             ) : portalTab === 'pain' ? (
               <PainTrackerPage />
             ) : portalTab === 'exercises' ? (
               <ExercisesPage />
+            ) : portalTab === 'chat' ? (
+              <ChatPage />
+            ) : portalTab === 'progress' ? (
+              <ProgressPage onNavigatePlans={() => setPortalTab('plans')} />
+            ) : portalTab === 'plans' ? (
+              <PlansBillingPage />
             ) : portalTab === 'patients' ? (
               <MyPatientsPage />
             ) : portalTab === 'schedule' ? (
@@ -242,6 +265,14 @@ function MainApp() {
               <ExerciseLibraryPage />
             ) : portalTab === 'invites' ? (
               <PatientInvitesPage />
+            ) : portalTab === 'approvals' ? (
+              <TherapistApprovalsPage />
+            ) : portalTab === 'users' ? (
+              <UserDirectoryPage />
+            ) : portalTab === 'tickets' ? (
+              <SupportTicketsPage />
+            ) : portalTab === 'help' ? (
+              <HelpPage />
             ) : (
               <div className="p-8 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center max-w-2xl mx-auto my-8">
                 <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto mb-4">

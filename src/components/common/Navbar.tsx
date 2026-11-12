@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { useTheme } from '../../context/ThemeContext.tsx';
 import { Sun, Moon, LogOut, User as UserIcon, ShieldAlert, Sparkles, Menu, X } from 'lucide-react';
-import { UserRole } from '../../types/index.ts';
+import { NotificationDropdown } from './NotificationDropdown.tsx';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -164,6 +164,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-600" />}
           </button>
+
+          {/* Notifications Dropdown for logged in users */}
+          {user && <NotificationDropdown />}
 
           {/* Authenticated user menu vs Guest login/register */}
           {user ? (

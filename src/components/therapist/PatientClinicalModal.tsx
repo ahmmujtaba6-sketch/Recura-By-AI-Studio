@@ -38,6 +38,9 @@ export const PatientClinicalModal: React.FC<PatientClinicalModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'pain' | 'exercises' | 'appointments'>('overview');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [editingCommentEntryId, setEditingCommentEntryId] = useState<number | null>(null);
+  const [commentInput, setCommentInput] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   useEffect(() => {
     if (isOpen && patientId) {
@@ -71,6 +74,40 @@ export const PatientClinicalModal: React.FC<PatientClinicalModalProps> = ({
       if (onRefresh) onRefresh();
     } catch (err: any) {
       showToast(err.message, 'error');
+    }
+  };
+
+  const handleSaveComment = async (painEntryId: number) => {
+    if (!commentInput.trim()) return;
+    try {
+      setIsSubmittingComment(true);
+      const res = await fetch('/api/therapist-workspace/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pain_entry_id: painEntryId,
+          text: commentInput.trim(),
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.upgradeRequired) {
+          showToast('Therapist comments require the patient to be on the Premium plan.', 'error');
+        } else {
+          showToast(json.error || 'Failed to submit comment', 'error');
+        }
+        return;
+      }
+
+      showToast('Clinical comment saved and patient notified!', 'success');
+      setEditingCommentEntryId(null);
+      setCommentInput('');
+      fetchPatientClinicalData();
+    } catch {
+      showToast('Network error saving comment', 'error');
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -347,10 +384,66 @@ export const PatientClinicalModal: React.FC<PatientClinicalModalProps> = ({
                               </div>
                             </div>
 
-                            {p.therapist_comment && (
-                              <div className="sm:max-w-xs p-2 rounded-xl bg-teal-100/70 dark:bg-teal-900/40 text-[11px] text-teal-900 dark:text-teal-200">
-                                <span className="font-bold block">Your Clinical Feedback:</span>
-                                <span>{p.therapist_comment}</span>
+                            {/* Therapist Clinical Feedback Form / Display */}
+                            {p.therapist_comment && editingCommentEntryId !== p.id && (
+                              <div className="sm:max-w-xs p-2.5 rounded-xl bg-teal-100/70 dark:bg-teal-900/40 text-[11px] text-teal-900 dark:text-teal-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold">Your Clinical Feedback:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCommentEntryId(p.id);
+                                      setCommentInput(p.therapist_comment || '');
+                                    }}
+                                    className="text-[10px] text-teal-700 dark:text-teal-300 underline font-semibold ml-2"
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                                <span className="mt-0.5 block">{p.therapist_comment}</span>
+                              </div>
+                            )}
+
+                            {!p.therapist_comment && editingCommentEntryId !== p.id && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCommentEntryId(p.id);
+                                  setCommentInput('');
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-teal-300 dark:border-teal-800 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 self-start sm:self-center transition-colors flex items-center gap-1"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>+ Add Clinical Note</span>
+                              </button>
+                            )}
+
+                            {editingCommentEntryId === p.id && (
+                              <div className="w-full sm:max-w-xs space-y-1.5 mt-2 sm:mt-0">
+                                <input
+                                  type="text"
+                                  value={commentInput}
+                                  onChange={(e) => setCommentInput(e.target.value)}
+                                  placeholder="Enter clinical advice..."
+                                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                />
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingCommentEntryId(null)}
+                                    className="px-2 py-0.5 text-[10px] rounded text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isSubmittingComment}
+                                    onClick={() => handleSaveComment(p.id)}
+                                    className="px-2.5 py-0.5 text-[10px] font-bold rounded bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                                  >
+                                    {isSubmittingComment ? 'Saving...' : 'Save'}
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>

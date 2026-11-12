@@ -13,6 +13,13 @@ import { appointmentsRouter } from './src/server/routes/appointments.ts';
 import { painRouter } from './src/server/routes/pain.ts';
 import { exercisesRouter } from './src/server/routes/exercises.ts';
 import { therapistWorkspaceRouter } from './src/server/routes/therapistWorkspace.ts';
+import { plansRouter } from './src/server/routes/plans.ts';
+import { videoRouter } from './src/server/routes/video.ts';
+import { chatRouter } from './src/server/routes/chat.ts';
+import { progressRouter } from './src/server/routes/progress.ts';
+import { notificationsRouter } from './src/server/routes/notifications.ts';
+import { adminRouter } from './src/server/routes/admin.ts';
+import { supportRouter } from './src/server/routes/support.ts';
 import { startCronJobs } from './src/server/cron.ts';
 
 dotenv.config();
@@ -33,7 +40,16 @@ async function startServer() {
   startCronJobs();
 
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+
+  // Port resolution: AI Studio requires the dev server to run on port 3000 behind NGINX
+  let PORT = 3000;
+  const portArgIndex = process.argv.indexOf('--port');
+  if (portArgIndex !== -1 && process.argv[portArgIndex + 1]) {
+    const parsed = Number(process.argv[portArgIndex + 1]);
+    if (!isNaN(parsed)) PORT = parsed;
+  } else if (process.env.APP_PORT) {
+    PORT = Number(process.env.APP_PORT);
+  }
 
   // Middlewares
   app.use(express.json());
@@ -48,6 +64,13 @@ async function startServer() {
   app.use('/api/pain', painRouter);
   app.use('/api/exercises', exercisesRouter);
   app.use('/api/therapist-workspace', therapistWorkspaceRouter);
+  app.use('/api/plans', plansRouter);
+  app.use('/api/video', videoRouter);
+  app.use('/api/chat', chatRouter);
+  app.use('/api/progress', progressRouter);
+  app.use('/api/notifications', notificationsRouter);
+  app.use('/api/admin', adminRouter);
+  app.use('/api/support', supportRouter);
 
   // Health check
   app.get('/api/health', (req, res) => {

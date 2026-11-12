@@ -18,7 +18,8 @@ import {
   LifeBuoy,
   ChevronRight,
   Sparkles,
-  BadgeAlert
+  BadgeAlert,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'appointments', label: 'My Appointments', icon: CalendarCheck },
     { id: 'pain', label: 'Pain Tracker', icon: Activity },
     { id: 'exercises', label: 'Daily Exercises', icon: Dumbbell },
+    { id: 'chat', label: 'Messages & Chat', icon: MessageSquare },
     { id: 'progress', label: 'Progress & Goals', icon: TrendingUp },
     { id: 'plans', label: 'Plans & Billing', icon: CreditCard },
     { id: 'help', label: 'Help & FAQ', icon: HelpCircle },
@@ -55,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const therapistNav = [
     { id: 'dashboard', label: 'Clinical Overview', icon: LayoutDashboard },
     { id: 'patients', label: 'My Patients', icon: Users },
+    { id: 'chat', label: 'Patient Chat', icon: MessageSquare },
     { id: 'schedule', label: 'Schedule & Slots', icon: Clock },
     { id: 'library', label: 'Exercise Library', icon: BookOpen },
     { id: 'invites', label: 'Patient Invites', icon: UserPlus },

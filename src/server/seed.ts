@@ -6,16 +6,20 @@ export async function seedDatabase() {
   console.log('Running migrations...');
   runMigrations();
 
-  // Check if already seeded
+  const defaultPassword = 'Password123!';
+  const passwordHash = await bcrypt.hash(defaultPassword, 10);
+
+  // Check if pending therapists or support tickets need to be populated
+  seedPendingAndTickets(passwordHash);
+
+  // Check if already seeded with full demo patients
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  if (userCount.count > 0) {
-    console.log('Database already contains data. Skipping full seed.');
+  if (userCount.count > 5) {
+    console.log('Database already contains primary seed data.');
     return;
   }
 
   console.log('Seeding demo accounts and mock data...');
-  const defaultPassword = 'Password123!';
-  const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
   const insertUser = db.prepare(`
     INSERT INTO users (email, password_hash, role)
@@ -428,6 +432,67 @@ export async function seedDatabase() {
   }
 
   console.log('Seeding completed successfully!');
+}
+
+function seedPendingAndTickets(passwordHash: string) {
+  // Seed Pending Therapists for Admin Approval Review
+  const pendingTherapists = [
+    {
+      email: 'dr.hamza.pending@recura.demo',
+      name: 'Dr. Hamza Malik, PT',
+      speciality: 'Sports Injury & Orthopaedic Rehab',
+      regNo: 'PK-PMR-44912',
+      exp: 6,
+      city: 'Lahore',
+      fee: 2500,
+      bio: 'Post-graduate training from King Edward Medical University. Specializes in ACL rehabilitation, rotator cuff recovery, and athletic return-to-sport protocols.',
+    },
+    {
+      email: 'dr.zainab.pending@recura.demo',
+      name: 'Dr. Zainab Bibi, PT',
+      speciality: 'Women’s Pelvic Health & Post-Partum',
+      regNo: 'PK-PMR-88301',
+      exp: 9,
+      city: 'Islamabad',
+      fee: 3000,
+      bio: 'Certified pelvic health and musculoskeletal specialist. Passionate about posture correction, pelvic floor rehabilitation, and geriatric joint mobility.',
+    },
+  ];
+
+  for (const pt of pendingTherapists) {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(pt.email);
+    if (!existing) {
+      const uRes = db.prepare('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)').run(pt.email, passwordHash, 'therapist');
+      const uId = uRes.lastInsertRowid as number;
+      db.prepare(`
+        INSERT INTO therapists (user_id, name, speciality, registration_no, experience, city, fee, bio, status, rating)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        uId,
+        pt.name,
+        pt.speciality,
+        pt.regNo,
+        pt.exp,
+        pt.city,
+        pt.fee,
+        pt.bio,
+        'pending',
+        4.7
+      );
+    }
+  }
+
+  // Seed Demo Support Tickets
+  const ticketCount = db.prepare('SELECT COUNT(*) as count FROM support_tickets').get() as { count: number };
+  if (ticketCount.count === 0) {
+    db.prepare(`
+      INSERT INTO support_tickets (user_id, name, email, category, message, status)
+      VALUES
+        (1, 'Hamza Abbasi', 'patient@recura.demo', 'appointments', 'Can I reschedule my upcoming Tuesday clinic appointment with Dr. Ayesha to Thursday afternoon?', 'open'),
+        (2, 'Dr. Ayesha Khan', 'therapist@recura.demo', 'billing', 'Inquiry regarding JazzCash payout cycle for completed home visit sessions.', 'in_progress'),
+        (NULL, 'Farhan Sheikh', 'farhan.sheikh@gmail.com', 'other', 'Are video consultations accessible via mobile browsers without installing an app?', 'resolved')
+    `).run();
+  }
 }
 
 // If run directly via command line
